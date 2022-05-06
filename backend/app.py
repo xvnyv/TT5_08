@@ -90,6 +90,7 @@ class ProjectExpense(Resource):
     @ns.marshal_with(expense_model)
     def get(self, project_id):
         """Fetch a given project expense"""
+        expenses = []
         get_expense_query = f"select * from expense where project_id = {project_id};"
         with connection.cursor() as cursor:
             cursor.execute(get_expense_query)
@@ -117,8 +118,8 @@ class ProjectExpense(Resource):
                     "updated_at": updated_date,
                     "updated_by": updated_user,
                 }
-                return expense
-        return {}, 404
+                expenses.append(expense)
+        return expenses
 
     @ns.doc("create_expense")
     @ns.expect(expense_input_model)
@@ -136,8 +137,9 @@ class ProjectExpense(Resource):
                 return {}, 400
             name = row[0]
             # insert new expense object
-            insert_query = f"insert into expense (project_id, category_id, name, description, amount, created_at, created_by, updated_at, updated_by) values (%s, %s, %s, %s, %s, %s, %s, %s, %s);"
             insert_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            # insert_query = f"insert into expense (project_id, category_id, name, description, amount, created_at, created_by, updated_at, updated_by) select '{project_id}', '{api.payload['cid']}', '{api.payload['name']}', '{api.payload['desc']}', '{api.payload['amt']}', '{insert_datetime}', name, '{insert_datetime}', name from user where id = {api.payload['user_id']};"
+            insert_query = f"insert into expense (project_id, category_id, name, description, amount, created_at, created_by, updated_at, updated_by) values (%s, %s, %s, %s, %s, %s, %s, %s, %s);"
             insert_data = (
                 project_id,
                 api.payload["cid"],
@@ -150,6 +152,7 @@ class ProjectExpense(Resource):
                 name,
             )
             cursor.execute(insert_query, insert_data)
+            # cursor.execute(insert_query)
             eid = cursor.lastrowid
             connection.commit()
 
