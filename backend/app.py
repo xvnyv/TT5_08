@@ -1,9 +1,13 @@
-import datetime
-from flask import Flask
+from flask import Flask, render_template, request, jsonify, session, url_for, redirect
 from flask_restx import Api, Resource, fields
 import mysql.connector
+from functools import wraps
+import jwt
+from datetime import datetime, timedelta
+
 
 flask_app = Flask(__name__)
+flask_app.config["SECRET_KEY"] = "secretkey"
 api = Api(
     app=flask_app,
     title="DBS Seed API",
@@ -11,7 +15,6 @@ api = Api(
 )
 
 ns = api.namespace("", description="Projects endpoints")
-
 connection = mysql.connector.connect(
     host="13.58.31.172", database="project_expenses", user="root", password=""
 )
@@ -23,6 +26,17 @@ project_model = api.model(
         "name": fields.String(),
         "desc": fields.String(),
         "budget": fields.Integer(),
+    },
+)
+
+user_model = api.model(
+    "User",
+    {
+        "id": fields.Integer(description="User ID"),
+        "username": fields.String(description="Username for login"),
+        "name": fields.String(description="Name of user"),
+        "appointment": fields.String(description="Appointment of user"),
+        "token": fields.String(description="JWT authentication token"),
     },
 )
 
@@ -55,7 +69,59 @@ expense_input_model = api.model(
     },
 )
 
+def check_for_token(func):
+    @wraps(func)
+    def wrapped(*args, **kwargs):
+        token = request.args.get("token")
+        if not token:
+            return jsonify({"message": "missing token"}), 403
+        try:
+            data = jwt.decode(token, flask_app.config["SECRET_KEY"])
+        except:
+            return jsonify({"message": "Invalid token"}), 403
+        return func(*args, **kwargs)
 
+    return wrapped
+
+
+@flask_app.route("/login", methods=["POST"])
+def login():
+    if request.method == "POST":
+        content = request.json
+        input_username = content["username"]
+        input_password = content["password"]
+
+        cursor = connection.cursor()
+        cursor.execute(f"SELECT * FROM user WHERE username='{input_username}';")
+        account = cursor.fetchone()
+
+        if account is None:
+            return {}, 401
+
+        user = {
+            "id": account[0],
+            "username": account[1],
+            "name": account[3],
+            "appointment": account[4],
+        }
+
+        password = account[2]
+
+        if input_password != password:
+            return {}, 401
+
+        session["loggedin"] = True
+        token = jwt.encode(
+            {
+                "user": user["username"],
+                "exp": datetime.utcnow() + timedelta(seconds=600),
+            },
+            flask_app.config["SECRET_KEY"],
+        )
+        user["token"] = token
+        return user
+
+      
 @ns.route("/projects/<int:user_id>")
 class ProjectList(Resource):
     """Show list of projects under a user"""
@@ -172,4 +238,4 @@ class ProjectExpense(Resource):
 
 
 if __name__ == "__main__":
-    flask_app.run()
+    flask_app.run(debug=True)
