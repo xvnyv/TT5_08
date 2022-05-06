@@ -63,12 +63,28 @@ expense_input_model = api.model(
         "name": fields.String(required=True, description="Expense name"),
         "desc": fields.String(required=True, description="Expense description"),
         "amt": fields.Integer(required=True, description="Expense amount"),
+    },
+)
+
+expense_update_model = api.model(
+    "Update Expense",
+    {
+        "id": fields.Integer(required=True, description="ID of expense"),
+        "pid": fields.Integer(required=True, description="Project ID"),
+        "cid": fields.Integer(required=True, description="Category ID"),
+        "name": fields.String(required=True, description="Expense name"),
+        "desc": fields.String(required=True, description="Expense description"),
+        "amt": fields.Integer(required=True, description="Expense amount"),
+        "updated_at": fields.String(description="Date when expense was last updated"),
+        "updated_by": fields.String(description="User that last updated expense"),
         "user_id": fields.Integer(
             required=True, description="User ID of user that created the expense"
         ),
     },
 )
-
+expense_delete_model = api.model(
+    "Delete Expense", {"id": fields.Integer(required=True, description="ID of expense")}
+)
 
 def check_for_token(func):
     @wraps(func)
@@ -78,12 +94,11 @@ def check_for_token(func):
             return {}, 403
 
         token = auth.split(" ")[1]
-        print(token)
         try:
             data = jwt.decode(
                 token, flask_app.config["SECRET_KEY"], algorithms=["HS256"]
             )
-            print(data)
+            kwargs["user_id"] = data.get("user", None)
         except Exception as err:
             print(err)
             return {}, 403
@@ -121,7 +136,7 @@ def login():
         session["loggedin"] = True
         token = jwt.encode(
             {
-                "user": user["username"],
+                "user": user["id"],
                 "exp": datetime.utcnow() + timedelta(seconds=3600),
             },
             flask_app.config["SECRET_KEY"],
@@ -130,17 +145,22 @@ def login():
         return user
 
 
-@ns.route("/projects/<int:user_id>")
+@ns.route("/projects")
 class ProjectList(Resource):
     """Show list of projects under a user"""
 
     # @ns.marshal_list_with(project_model)
     @ns.doc("list_projects")
     @check_for_token
-    def get(self, user_id):
+    def get(self, **kwargs):
         """List all items"""
+        if kwargs["user_id"] is None:
+            return "Invalid token", 401
+
         proj_list = []
-        get_project_list_query = f"select * from project where user_id = {user_id};"
+        get_project_list_query = (
+            f"select * from project where user_id = '{kwargs['user_id']}';"
+        )
         with connection.cursor() as cursor:
             cursor.execute(get_project_list_query)
             for (pid, _, pname, pdesc, pbudget) in cursor:
@@ -164,8 +184,11 @@ class ProjectExpense(Resource):
     # @ns.marshal_with(expense_model)
     @ns.doc("get_expense")
     @check_for_token
-    def get(self, project_id):
+    def get(self, project_id, **kwargs):
         """Fetch a given project expense"""
+        if kwargs["user_id"] is None:
+            return "Invalid token", 401
+
         expenses = []
         get_expense_query = f"select * from expense where project_id = {project_id};"
         with connection.cursor() as cursor:
@@ -202,13 +225,14 @@ class ProjectExpense(Resource):
     @ns.doc("create_expense")
     @ns.expect(expense_input_model)
     @check_for_token
-    def post(self, project_id):
+    def post(self, project_id, **kwargs):
         """Create new project expense"""
+        if kwargs["user_id"] is None:
+            return "Invalid token", 401
+
         with connection.cursor() as cursor:
             # get user name
-            user_name_query = (
-                f"select name from user where id = {api.payload['user_id']};"
-            )
+            user_name_query = f"select name from user where id = {kwargs['user_id']};"
             cursor.execute(user_name_query)
             row = cursor.fetchone()
             if row is None:
@@ -248,6 +272,63 @@ class ProjectExpense(Resource):
             }
         return expense, 201
 
+    # @ns.marshal_with(expense_model, code=201)
+    @ns.doc("update_expenses")
+    @ns.expect(expense_update_model)
+    def put(self, project_id):
+        """Edit current project expense"""
+        with connection.cursor() as cursor:
+            # get user name
+            user_name_query = (
+                f"select name from user where id = {api.payload['user_id']};"
+            )
+            cursor.execute(user_name_query)
+            row = cursor.fetchone()
+            if row is None:
+                return {}, 400
+            else:
+                name = row[0]
+
+            # updating new expense object
+            update_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            update_query = f"update expense set name = %s, description = %s, amount = %s, updated_at = %s, updated_by = %s where id = %s and project_id = %s;"
+            update_data = (
+                api.payload["name"],
+                api.payload["desc"],
+                api.payload["amt"],
+                update_datetime,
+                name,
+                api.payload["id"],
+                project_id,
+            )
+            cursor.execute(update_query, update_data)
+            connection.commit()
+
+            expense = {
+                "id": api.payload["id"],
+                "pid": api.payload["pid"],
+                "cid": api.payload["cid"],
+                "name": api.payload["name"],
+                "desc": api.payload["desc"],
+                "amt": api.payload["amt"],
+                "updated_at": update_datetime,
+                "updated_by": name,
+            }
+        return expense, 201
+
+    # @ns.marshal_with(expense_model, code=201)
+    @ns.doc("delete_expenses")
+    @ns.expect(expense_delete_model)
+    def delete(self, project_id):
+        """Delete current project expense"""
+        with connection.cursor() as cursor:
+            delete_query = f"delete from expense where id = %s and project_id = %s;"
+            delete_data = (api.payload["id"], project_id)
+            cursor.execute(delete_query, delete_data)
+            connection.commit()
+
+            expense = "successfully deleted"
+        return expense
 
 if __name__ == "__main__":
     flask_app.run(debug=True)
