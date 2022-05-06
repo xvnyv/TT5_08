@@ -30,59 +30,92 @@ project_model = api.model(
         "name": fields.String(),
         "desc": fields.String(),
         "budget": fields.Integer(),
-        "user": fields.String(),
+    },
+)
+
+# eid, pid, cid, name, desc, amt, created_date, created_user, updated_date, updated_user
+
+expense_model = api.model(
+    "Expense",
+    {
+        "eid": fields.Integer(),
+        "pid": fields.Integer(),
+        "cid": fields.Integer(),
+        "name": fields.String(),
+        "desc": fields.String(),
+        "amt": fields.Integer(),
+        "created_at": fields.String(),
+        "created_by": fields.String(),
+        "updated_at": fields.String(),
+        "updated_by": fields.String(),
     },
 )
 
 
-@ns.route("/projects")
+@ns.route("/projects/<int:user_id>")
 class ProjectList(Resource):
-    """Show list of projects and allow creation of project"""
+    """Show list of projects under a user"""
 
     @ns.doc("list_projects")
     @ns.marshal_list_with(project_model)
-    def get(self):
+    def get(self, user_id):
         """List all items"""
         proj_list = []
-        get_project_list_query = "select * from (project p inner join (select id, name as user from user) u on p.user_id = u.id);"
+        get_project_list_query = f"select * from project where user_id = {user_id};"
         with connection.cursor() as cursor:
             cursor.execute(get_project_list_query)
-            for (pid, _, pname, pdesc, pbudget, _, uname) in cursor:
+            for (pid, _, pname, pdesc, pbudget) in cursor:
                 proj = {
                     "id": int(pid),
                     "name": pname,
                     "desc": pdesc,
-                    "budget": pbudget,
-                    "user": uname,
+                    "budget": int(pbudget),
                 }
                 proj_list.append(proj)
 
         return proj_list
 
 
-#     @ns.doc("create_item")
-#     @ns.expect(test_model)
-#     @ns.marshal_with(test_model, code=201)
-#     def post(self):
-#         """Create new item"""
-#         items.append(api.payload)
-#         return items, 201
+@ns.route("/expense/<int:project_id>")
+@ns.response(404, "Item not found")
+@ns.param("project_id", "Project ID")
+class ProjectExpense(Resource):
+    """Show a single project expense and allow addition, deletion and update of project expense"""
 
+    @ns.doc("get_expense")
+    @ns.marshal_with(expense_model)
+    def get(self, project_id):
+        """Fetch a given project expense"""
+        get_expense_query = f"select * from expense where project_id = {project_id};"
+        with connection.cursor() as cursor:
+            cursor.execute(get_expense_query)
+            for (
+                eid,
+                pid,
+                cid,
+                name,
+                desc,
+                amt,
+                created_date,
+                created_user,
+                updated_date,
+                updated_user,
+            ) in cursor:
+                expense = {
+                    "eid": eid,
+                    "pid": pid,
+                    "cid": cid,
+                    "name": name,
+                    "desc": desc,
+                    "amt": amt,
+                    "created_at": created_date,
+                    "created_by": created_user,
+                    "updated_at": updated_date,
+                    "updated_by": updated_user,
+                }
+                return expense
+        return {}, 404
 
-# @ns.route("/expense/<int:project_id>")
-# @ns.response(404, "Item not found")
-# @ns.param("project_id", "Project ID")
-# class ProjectExpense(Resource):
-#     """Show a single project expense and allow addition, deletion and update of project expense"""
-
-#     @ns.doc("get_item")
-#     @ns.marshal_with(test_model)
-#     def get(self, int_field):
-#         """Fetch a given item"""
-#         for item in items:
-#             if item["int_field"] == int_field:
-#                 return item
-#         return "", 404
 
 # @ns.doc("create_expense")
 # @ns.expect(test_model)
