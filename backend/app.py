@@ -1,11 +1,13 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request,jsonify,session,url_for,redirect
 from flask_restx import Api, Resource, fields
 import mysql.connector
-import jwt
 from functools import wraps
+import jwt
+from datetime import datetime, timedelta
 
 
 flask_app = Flask(__name__)
+flask_app.config['SECRET_KEY'] = 'secretkey'
 api = Api(
     app=flask_app,
     title="DBS Seed API",
@@ -26,32 +28,22 @@ test_model = api.model(
 
 connection = mysql.connector.connect(host='13.58.31.172',database='project_expenses',user='root',password='')
 
-def token_required(f):
-   @wraps(f)
-   def decorator(*args, **kwargs):
-
-      token = None
-
-      if 'x-access-tokens' in request.headers:
-         token = request.headers['x-access-tokens']
-
-      if not token:
-         return jsonify({'message': 'a valid token is missing'})
-
-      try:
-         data = jwt.decode(token, app.config[SECRET_KEY])
-         current_user = Users.query.filter_by(public_id=data['public_id']).first()
-      except:
-         return jsonify({'message': 'token is invalid'})
-
-        return f(current_user, *args, **kwargs)
-   return decorator
-
+def check_for_token(func):
+    @wraps(func)
+    def wrapped(*args, **kwargs):
+        token = request.args.get('token')
+        if not token:
+            return jsonify({"message": "missing token"}), 403
+        try:
+            data = jwt.decode(token,flask_app.config['SECRET_KEY'])
+        except:
+            return jsonify({'message' : 'Invalid token'}), 403
+        return func(*args, **kwargs)
+    return wrapped
 
 
 @flask_app.route('/login',methods =['GET','POST'])
 def login():
-    
     
     if request.method == 'POST':
         content = request.json
@@ -63,25 +55,28 @@ def login():
         account = cursor.fetchone()
         
         if account and password == account['password']:
-            ## return JWT token
-            access_token = create_access_token(identity = username)
-            refresh_token = create_refresh_token(identity =username)
+            session['loggedin'] = True
+            token =jwt.encode({
+                'user': username,
+                'exp': datetime.utcnow() + timedelta(seconds=600)
+            })
             
-            return {
-                'message' : f' Hello {username}!',
-                'access_token' : access_token,
-                'refresh_token' : refresh_token
-            }
-        
         else:
-            return{'message': "wrong credentials"}    
-        
+            return "wrong password or username"
+            
+                
     return render_template('login.html')######  
 
-@jwt_required
-@flask_app.route('/logout',methods = ['GET','POST'])
+@flask_app.route('/logout')
 def logout():
     
+    session.pop('loggedin',None)
+    session.pop('id',None)
+    session.pop('username',None)
+    
+    return redirect(url_for('login'))
+
+## some home route that requires login?
 
           
 
