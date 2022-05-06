@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request,jsonify,session,url_for,redirect
+from flask import Flask, render_template, request, jsonify, session, url_for, redirect
 from flask_restx import Api, Resource, fields
 import mysql.connector
 from functools import wraps
@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 
 
 flask_app = Flask(__name__)
-flask_app.config['SECRET_KEY'] = 'secretkey'
+flask_app.config["SECRET_KEY"] = "secretkey"
 api = Api(
     app=flask_app,
     title="DBS Seed API",
@@ -15,7 +15,6 @@ api = Api(
 )
 
 ns = api.namespace("ns1", description="NS1 description")
-
 
 
 test_model = api.model(
@@ -26,54 +25,74 @@ test_model = api.model(
     },
 )
 
-connection = mysql.connector.connect(host='13.58.31.172',database='project_expenses',user='root',password='')
+user_model = api.model(
+    "User",
+    {
+        "id": fields.Integer(description="User ID"),
+        "username": fields.String(description="Username for login"),
+        "name": fields.String(description="Name of user"),
+        "appointment": fields.String(description="Appointment of user"),
+        "token": fields.String(description="JWT authentication token"),
+    },
+)
+
+connection = mysql.connector.connect(
+    host="13.58.31.172", database="project_expenses", user="root", password=""
+)
+
 
 def check_for_token(func):
     @wraps(func)
     def wrapped(*args, **kwargs):
-        token = request.args.get('token')
+        token = request.args.get("token")
         if not token:
             return jsonify({"message": "missing token"}), 403
         try:
-            data = jwt.decode(token,flask_app.config['SECRET_KEY'])
+            data = jwt.decode(token, flask_app.config["SECRET_KEY"])
         except:
-            return jsonify({'message' : 'Invalid token'}), 403
+            return jsonify({"message": "Invalid token"}), 403
         return func(*args, **kwargs)
+
     return wrapped
 
 
-@flask_app.route('/login',methods =['GET','POST'])
+@flask_app.route("/login", methods=["POST"])
 def login():
-    
-    if request.method == 'POST':
+    if request.method == "POST":
         content = request.json
-        username = content['username']
-        password = content['password']
-        
+        input_username = content["username"]
+        input_password = content["password"]
+
         cursor = connection.cursor()
-        query = "select * from user where username = %s;"
-        un = username
-        cursor.execute(query,un)
-        connection.commit()
+        cursor.execute(f"SELECT * FROM user WHERE username='{input_username}';")
         account = cursor.fetchone()
-        
-        if account and password == account['password']:
-            session['loggedin'] = True
-            token =jwt.encode({
-                'user': username,
-                'exp': datetime.utcnow() + timedelta(seconds=600)
-            },flask_app.config['SECRET_KEY'])
-            return jsonify({'token':token.decode('utf-8')})
-            
-        else:
-            return "wrong password or username"
-            
-                
 
-##@check_for_token
-## some home route that requires login?
+        if account is None:
+            return {}, 401
 
-items = []  
+        user = {
+            "id": account[0],
+            "username": account[1],
+            "name": account[3],
+            "appointment": account[4],
+        }
+
+        password = account[2]
+
+        if input_password != password:
+            return {}, 401
+
+        session["loggedin"] = True
+        token = jwt.encode(
+            {
+                "user": user["username"],
+                "exp": datetime.utcnow() + timedelta(seconds=600),
+            },
+            flask_app.config["SECRET_KEY"],
+        )
+        user["token"] = token
+        return user
+
 
 
 @ns.route("/")
@@ -135,4 +154,4 @@ class Item(Resource):
 
 
 if __name__ == "__main__":
-    flask_app.run()
+    flask_app.run(debug=True)
