@@ -45,7 +45,7 @@ function Project(props) {
                             <p><textarea ref={desRef} cols="100" type="text" id="description" placeholder={description} /></p>
                         </div>
                         
-                        <div className='py-3 px-1 my-2 mx-5 border border-dark border-5 rounded'>
+                        <div className='py-3 px-1 my-2 mx-5 border border-dark border-2 rounded'>
                             <p>
                                 <label htmlFor="Budget">Expense amount: </label>
                                 <input ref={budgetRef} type="text" id="Budget" placeholder={amount} />
@@ -76,7 +76,7 @@ function Project(props) {
                             <h1 className=''>{name}</h1>
                             <p className='text-faded'>{description}</p>
                         </div>
-                        <div className='py-3 px-1 my-2 mx-5 border border-dark border-5 rounded'>
+                        <div className='py-3 px-1 my-2 mx-5 border border-dark border-2 rounded'>
                             <p>
                                 Expense amount: {amount}
                             </p>
@@ -109,82 +109,3 @@ function Project(props) {
 export default Project
 
 
-
-/* <div>
-            {isEdit ? (
-                <form onSubmit={handleSubmit}>
-                    < div >
-
-                        {viewProject.map((expense, key) => (
-                            <div key={key}>
-                                <div className='text-center bg-secondary rounded-pill py-3'>
-                                    <h1 >{expense.name}</h1>
-                                    <p>{expense.description}</p>
-                                </div>
-                                <div className='py-3 px-1 my-2 mx-5 border border-dark border-5 rounded'>
-                                    <p>
-                                        <label htmlFor="Budget">Budget: </label>
-                                        <input type="text" id="Budget" placeholder={expense.amount} />
-                                    </p>
-                                    <p>
-                                        Expense Created on: {expense.created_at}
-                                    </p>
-                                    <p>
-                                        Expense Created by: {expense.created_by}
-                                    </p>
-                                    <p>
-                                        Expense Last Updated on: {expense.updated_at}
-                                    </p>
-                                    <p>
-                                        Expense Last Updated by: {expense.updated_by}
-                                    </p>
-                                </div>
-                                <div className='text-center'>
-                                    <button className="btn btn-dark" type='Submit'>Submit Changes</button>
-                                </div>
-                            </div>
-                        ))}
-
-
-                    </div >
-                </form>
-            )
-                :
-                (<>
-                    {viewProject.map((expense, key) => (
-                        <div key={key}>
-                            <div className='text-center bg-secondary rounded-pill py-3'>
-                                <h1 >{expense.name}</h1>
-                                <p>{expense.description}</p>
-                            </div>
-                            <div className='py-3 px-1 my-2 mx-5 border border-dark border-5 rounded'>
-                                <p>
-        
-                                    Budget: {expense.amount}
-                                </p>
-                                <p>
-                                    Expense Created on: {expense.created_at}
-                                </p>
-                                <p>
-                                    Expense Created by: {expense.created_by}
-                                </p>
-                                <p>
-                                    Expense Last Updated on: {expense.updated_at}
-                                </p>
-                                <p>
-                                    Expense Last Updated by: {expense.updated_by}
-                                </p>
-                            </div>
-                            <div className='text-center'>
-                                <button className="btn btn-dark me-2" onClick={handleClickEdit}>Edit</button>
-                                <button className="btn btn-dark" onClick={handleDelete}>Delete Project</button>
-                            </div>
-                        </div >
-                    ))}
-
-
-                </>
-                )}
-
-
-        </div> */

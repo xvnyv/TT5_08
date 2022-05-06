@@ -1,9 +1,14 @@
 import React, { useRef, useState, useContext } from 'react'
 import Project from './Project'
 import MainContext from '../context/MainContext'
+import CreateExpense from './CreateExpense'
 
 function AllExpenses() {
     // const [viewProject] = useContext(MainContext);
+
+    const handleClick = () => {
+
+    }
 
     const viewProject = [
         {
@@ -41,6 +46,8 @@ function AllExpenses() {
                     <Project  exp={expense} />
                 </div>
             ))}
+            <CreateExpense />
+            
         </div>
     )
 }
