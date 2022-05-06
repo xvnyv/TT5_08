@@ -1,32 +1,42 @@
-import React,{useRef} from 'react'
+import React, { useRef, useContext } from 'react'
+import MainContext from '../context/MainContext';
 
 function Login() {
     const userRef = useRef();
     const passRef = useRef();
+    const { setUser, setProjects } = useContext(MainContext);
 
-    
 
-  return (
-    <div>
-        <form className="loginForm" method='POST'>
-            <div className='loginBox text-center mt-4'>
-                <div className='row justify-content-center'>
-                    <div className='col-6'>
-                        <label htmlFor="username" className="form-lab">Username</label>
-                        <input ref={userRef} type="text" className="form-control rounded-pill border-2" id='username' placeholder='Enter username' />
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        // TODO send user and pass to server
+
+    }
+
+
+    return (
+            <div className='d-flex flex-column justify-content-center'>
+                <h1 className='text-center'>Welcome! Please log in to continue!</h1>
+                <form className="loginForm" onSubmit={handleSubmit} method='POST'>
+                    <div className='loginBox text-center mt-4'>
+                        <div className='row justify-content-center'>
+                            <div className='col-2'>
+                                <label htmlFor="username" className="form-lab">Username</label>
+                                <input ref={userRef} type="text" className="form-control rounded-pill border-2" id='username' placeholder='Enter username' />
+                            </div>
+                        </div>
+                        <div className='row justify-content-center'>
+                            <div className="col-2">
+                                <label htmlFor="password" className="form-lab">Password</label>
+                                <input ref={passRef} type="password" className="form-control rounded-pill border-2" id='password' placeholder='Enter password' />
+                            </div>
+                        </div>
+                        <button type="submit" className="btn btn-dark mt-3">Login</button>
                     </div>
-                </div>
-                <div className='row justify-content-center'>
-                    <div className="col-6">
-                        <label htmlFor="password" className="form-lab">Password</label>
-                        <input ref={passRef} type="password" className="form-control rounded-pill border-2" id='password' placeholder='Enter password' />
-                    </div>
-                </div>
-                <button type="submit" className="btn btn-primary mt-3">Login</button>
+                </form>
             </div>
-        </form>
-    </div>
-  )
+    )
 }
 
 export default Login
