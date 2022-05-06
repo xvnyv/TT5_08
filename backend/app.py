@@ -51,7 +51,10 @@ def login():
         password = content['password']
         
         cursor = connection.cursor()
-        cursor.execute('SELECT * FROM user WHERE username = %s',(username))
+        query = "select * from user where username = %s;"
+        un = username
+        cursor.execute(query,un)
+        connection.commit()
         account = cursor.fetchone()
         
         if account and password == account['password']:
@@ -59,34 +62,18 @@ def login():
             token =jwt.encode({
                 'user': username,
                 'exp': datetime.utcnow() + timedelta(seconds=600)
-            })
+            },flask_app.config['SECRET_KEY'])
+            return jsonify({'token':token.decode('utf-8')})
             
         else:
             return "wrong password or username"
             
                 
-    return render_template('login.html')######  
 
-@flask_app.route('/logout')
-def logout():
-    
-    session.pop('loggedin',None)
-    session.pop('id',None)
-    session.pop('username',None)
-    
-    return redirect(url_for('login'))
-
+##@check_for_token
 ## some home route that requires login?
 
-          
-
-
-
-
-items = [
-    {"int_field": 1, "str_field": "str1"},
-    {"int_field": 2, "str_field": "str2"},
-]
+items = []  
 
 
 @ns.route("/")
