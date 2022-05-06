@@ -6,6 +6,13 @@ import CreateExpense from './CreateExpense'
 function AllExpenses() {
     // const [viewProject] = useContext(MainContext);
 
+<<<<<<< HEAD
+=======
+    const handleClick = () => {
+
+    }
+
+>>>>>>> f10e8b775380c801628bfe26217e1d5d05574607
     const viewProject = [
         {
             "id": 1,
