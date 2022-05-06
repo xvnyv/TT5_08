@@ -1,9 +1,13 @@
-import datetime
-from flask import Flask
+from flask import Flask, request, session
 from flask_restx import Api, Resource, fields
 import mysql.connector
+from functools import wraps
+import jwt
+from datetime import datetime, timedelta
+
 
 flask_app = Flask(__name__)
+flask_app.config["SECRET_KEY"] = "secretkey"
 api = Api(
     app=flask_app,
     title="DBS Seed API",
@@ -11,7 +15,6 @@ api = Api(
 )
 
 ns = api.namespace("", description="Projects endpoints")
-
 connection = mysql.connector.connect(
     host="13.58.31.172", database="project_expenses", user="root", password=""
 )
@@ -23,6 +26,17 @@ project_model = api.model(
         "name": fields.String(),
         "desc": fields.String(),
         "budget": fields.Integer(),
+    },
+)
+
+user_model = api.model(
+    "User",
+    {
+        "id": fields.Integer(description="User ID"),
+        "username": fields.String(description="Username for login"),
+        "name": fields.String(description="Name of user"),
+        "appointment": fields.String(description="Appointment of user"),
+        "token": fields.String(description="JWT authentication token"),
     },
 )
 
@@ -49,9 +63,6 @@ expense_input_model = api.model(
         "name": fields.String(required=True, description="Expense name"),
         "desc": fields.String(required=True, description="Expense description"),
         "amt": fields.Integer(required=True, description="Expense amount"),
-        "user_id": fields.Integer(
-            required=True, description="User ID of user that created the expense"
-        ),
     },
 )
 
@@ -75,17 +86,81 @@ expense_delete_model = api.model(
     "Delete Expense", {"id": fields.Integer(required=True, description="ID of expense")}
 )
 
+def check_for_token(func):
+    @wraps(func)
+    def wrapped(*args, **kwargs):
+        auth = request.headers.get("Authorization", None)
+        if auth is None:
+            return {}, 403
 
-@ns.route("/projects/<int:user_id>")
+        token = auth.split(" ")[1]
+        try:
+            data = jwt.decode(
+                token, flask_app.config["SECRET_KEY"], algorithms=["HS256"]
+            )
+            kwargs["user_id"] = data.get("user", None)
+        except Exception as err:
+            print(err)
+            return {}, 403
+        return func(*args, **kwargs)
+
+    return wrapped
+
+
+@flask_app.route("/login", methods=["POST"])
+def login():
+    if request.method == "POST":
+        content = request.json
+        input_username = content["username"]
+        input_password = content["password"]
+
+        cursor = connection.cursor()
+        cursor.execute(f"SELECT * FROM user WHERE username='{input_username}';")
+        account = cursor.fetchone()
+
+        if account is None:
+            return {}, 401
+
+        user = {
+            "id": account[0],
+            "username": account[1],
+            "name": account[3],
+            "appointment": account[4],
+        }
+
+        password = account[2]
+
+        if input_password != password:
+            return {}, 401
+
+        session["loggedin"] = True
+        token = jwt.encode(
+            {
+                "user": user["id"],
+                "exp": datetime.utcnow() + timedelta(seconds=3600),
+            },
+            flask_app.config["SECRET_KEY"],
+        )
+        user["token"] = token
+        return user
+
+
+@ns.route("/projects")
 class ProjectList(Resource):
     """Show list of projects under a user"""
 
+    # @ns.marshal_list_with(project_model)
     @ns.doc("list_projects")
-    @ns.marshal_list_with(project_model)
-    def get(self, user_id):
+    @check_for_token
+    def get(self, **kwargs):
         """List all items"""
+        if kwargs["user_id"] is None:
+            return "Invalid token", 401
+
         proj_list = []
-        get_project_list_query = f"select * from project where user_id = {user_id};"
+        get_project_list_query = (
+            f"select * from project where user_id = '{kwargs['user_id']}';"
+        )
         with connection.cursor() as cursor:
             cursor.execute(get_project_list_query)
             for (pid, _, pname, pdesc, pbudget) in cursor:
@@ -106,10 +181,14 @@ class ProjectList(Resource):
 class ProjectExpense(Resource):
     """Show a single project expense and allow addition, deletion and update of project expense"""
 
+    # @ns.marshal_with(expense_model)
     @ns.doc("get_expense")
-    @ns.marshal_with(expense_model)
-    def get(self, project_id):
+    @check_for_token
+    def get(self, project_id, **kwargs):
         """Fetch a given project expense"""
+        if kwargs["user_id"] is None:
+            return "Invalid token", 401
+
         expenses = []
         get_expense_query = f"select * from expense where project_id = {project_id};"
         with connection.cursor() as cursor:
@@ -133,31 +212,34 @@ class ProjectExpense(Resource):
                     "name": name,
                     "desc": desc,
                     "amt": amt,
-                    "created_at": created_date,
+                    "created_at": created_date.strftime("%Y-%m-%d %H:%M:%S"),
                     "created_by": created_user,
-                    "updated_at": updated_date,
+                    "updated_at": updated_date.strftime("%Y-%m-%d %H:%M:%S"),
                     "updated_by": updated_user,
                 }
                 expenses.append(expense)
+        print(expenses)
         return expenses
 
+    # @ns.marshal_with(expense_model, code=201)
     @ns.doc("create_expense")
     @ns.expect(expense_input_model)
-    @ns.marshal_with(expense_model, code=201)
-    def post(self, project_id):
+    @check_for_token
+    def post(self, project_id, **kwargs):
         """Create new project expense"""
+        if kwargs["user_id"] is None:
+            return "Invalid token", 401
+
         with connection.cursor() as cursor:
             # get user name
-            user_name_query = (
-                f"select name from user where id = {api.payload['user_id']};"
-            )
+            user_name_query = f"select name from user where id = {kwargs['user_id']};"
             cursor.execute(user_name_query)
             row = cursor.fetchone()
             if row is None:
                 return {}, 400
             name = row[0]
             # insert new expense object
-            insert_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            insert_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             # insert_query = f"insert into expense (project_id, category_id, name, description, amount, created_at, created_by, updated_at, updated_by) select '{project_id}', '{api.payload['cid']}', '{api.payload['name']}', '{api.payload['desc']}', '{api.payload['amt']}', '{insert_datetime}', name, '{insert_datetime}', name from user where id = {api.payload['user_id']};"
             insert_query = f"insert into expense (project_id, category_id, name, description, amount, created_at, created_by, updated_at, updated_by) values (%s, %s, %s, %s, %s, %s, %s, %s, %s);"
             insert_data = (
@@ -247,7 +329,6 @@ class ProjectExpense(Resource):
 
             expense = "successfully deleted"
         return expense
-
 
 if __name__ == "__main__":
     flask_app.run(debug=True)
