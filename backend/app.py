@@ -1,6 +1,7 @@
-from flask import Flask
+from flask import Flask, render_template, request
 from flask_restx import Api, Resource, fields
 import mysql.connector
+from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required
 
 flask_app = Flask(__name__)
 api = Api(
@@ -11,7 +12,6 @@ api = Api(
 
 ns = api.namespace("ns1", description="NS1 description")
 
-connection = mysql.connector.connect(host='13.58.31.172',database='project_expenses',user='root',password='')
 
 
 test_model = api.model(
@@ -22,7 +22,42 @@ test_model = api.model(
     },
 )
 
-cnx = mysql.connector.connect(user="xinyi")
+connection = mysql.connector.connect(host='13.58.31.172',database='project_expenses',user='root',password='')
+
+@flask_app.route('/login',methods =['GET','POST'])
+def login():
+    
+    
+    if request.method == 'POST':
+        content = request.json
+        username = content['username']
+        password = content['password']
+        
+        cursor = connection.cursor()
+        cursor.execute('SELECT * FROM user WHERE username = %s',(username))
+        account = cursor.fetchone()
+        
+        if account and password == account['password']:
+            ## return JWT token
+            access_token = create_access_token(identity = username)
+            refresh_token = create_refresh_token(identity =username)
+            
+            return {
+                'message' : f' Hello {username}!',
+                'access_token' : access_token,
+                'refresh_token' : refresh_token
+            }
+        
+        else:
+            return{'message': "wrong credentials"}    
+        
+    return ('hello world')    
+        
+@flask_app.route('/logout',methods = ['GET','POST'])
+def logout();
+
+
+
 
 items = [
     {"int_field": 1, "str_field": "str1"},
