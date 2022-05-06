@@ -1,5 +1,6 @@
 from flask import Flask, request, session
 from flask_restx import Api, Resource, fields
+from flask_cors import CORS, cross_origin
 import mysql.connector
 from functools import wraps
 import jwt
@@ -7,6 +8,7 @@ from datetime import datetime, timedelta
 
 
 flask_app = Flask(__name__)
+cors = CORS(flask_app)
 flask_app.config["SECRET_KEY"] = "secretkey"
 api = Api(
     app=flask_app,
@@ -109,6 +111,7 @@ def check_for_token(func):
 
 
 @flask_app.route("/login", methods=["POST"])
+@cross_origin()
 def login():
     if request.method == "POST":
         content = request.json
@@ -152,6 +155,7 @@ class ProjectList(Resource):
 
     # @ns.marshal_list_with(project_model)
     @ns.doc("list_projects")
+    @cross_origin()
     @check_for_token
     def get(self, **kwargs):
         """List all items"""
@@ -184,6 +188,7 @@ class ProjectExpense(Resource):
 
     # @ns.marshal_with(expense_model)
     @ns.doc("get_expense")
+    @cross_origin()
     @check_for_token
     def get(self, project_id, **kwargs):
         """Fetch a given project expense"""
@@ -225,6 +230,7 @@ class ProjectExpense(Resource):
     # @ns.marshal_with(expense_model, code=201)
     @ns.doc("create_expense")
     @ns.expect(expense_input_model)
+    @cross_origin()
     @check_for_token
     def post(self, project_id, **kwargs):
         """Create new project expense"""
@@ -276,6 +282,7 @@ class ProjectExpense(Resource):
     # @ns.marshal_with(expense_model, code=201)
     @ns.doc("update_expenses")
     @ns.expect(expense_update_model)
+    @cross_origin()
     @check_for_token
     def put(self, project_id, **kwargs):
         """Edit current project expense"""
@@ -322,6 +329,7 @@ class ProjectExpense(Resource):
     # @ns.marshal_with(expense_model, code=201)
     @ns.doc("delete_expenses")
     @ns.expect(expense_delete_model)
+    @cross_origin()
     @check_for_token
     def delete(self, project_id, **kwargs):
         """Delete current project expense"""
