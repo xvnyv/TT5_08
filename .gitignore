@@ -44,3 +44,4 @@ backend/.pytest_cache/
 backend/.idea/
 backend/docs/_build/
 backend/.vscode
+backend/__pycache__/*

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, session, url_for, redirect
+from flask import Flask, request, session
 from flask_restx import Api, Resource, fields
 import mysql.connector
 from functools import wraps
@@ -69,16 +69,24 @@ expense_input_model = api.model(
     },
 )
 
+
 def check_for_token(func):
     @wraps(func)
     def wrapped(*args, **kwargs):
-        token = request.args.get("token")
-        if not token:
-            return jsonify({"message": "missing token"}), 403
+        auth = request.headers.get("Authorization", None)
+        if auth is None:
+            return {}, 403
+
+        token = auth.split(" ")[1]
+        print(token)
         try:
-            data = jwt.decode(token, flask_app.config["SECRET_KEY"])
-        except:
-            return jsonify({"message": "Invalid token"}), 403
+            data = jwt.decode(
+                token, flask_app.config["SECRET_KEY"], algorithms=["HS256"]
+            )
+            print(data)
+        except Exception as err:
+            print(err)
+            return {}, 403
         return func(*args, **kwargs)
 
     return wrapped
@@ -114,20 +122,21 @@ def login():
         token = jwt.encode(
             {
                 "user": user["username"],
-                "exp": datetime.utcnow() + timedelta(seconds=600),
+                "exp": datetime.utcnow() + timedelta(seconds=3600),
             },
             flask_app.config["SECRET_KEY"],
         )
         user["token"] = token
         return user
 
-      
+
 @ns.route("/projects/<int:user_id>")
 class ProjectList(Resource):
     """Show list of projects under a user"""
 
+    # @ns.marshal_list_with(project_model)
     @ns.doc("list_projects")
-    @ns.marshal_list_with(project_model)
+    @check_for_token
     def get(self, user_id):
         """List all items"""
         proj_list = []
@@ -152,8 +161,9 @@ class ProjectList(Resource):
 class ProjectExpense(Resource):
     """Show a single project expense and allow addition, deletion and update of project expense"""
 
+    # @ns.marshal_with(expense_model)
     @ns.doc("get_expense")
-    @ns.marshal_with(expense_model)
+    @check_for_token
     def get(self, project_id):
         """Fetch a given project expense"""
         expenses = []
@@ -179,17 +189,19 @@ class ProjectExpense(Resource):
                     "name": name,
                     "desc": desc,
                     "amt": amt,
-                    "created_at": created_date,
+                    "created_at": created_date.strftime("%Y-%m-%d %H:%M:%S"),
                     "created_by": created_user,
-                    "updated_at": updated_date,
+                    "updated_at": updated_date.strftime("%Y-%m-%d %H:%M:%S"),
                     "updated_by": updated_user,
                 }
                 expenses.append(expense)
+        print(expenses)
         return expenses
 
+    # @ns.marshal_with(expense_model, code=201)
     @ns.doc("create_expense")
     @ns.expect(expense_input_model)
-    @ns.marshal_with(expense_model, code=201)
+    @check_for_token
     def post(self, project_id):
         """Create new project expense"""
         with connection.cursor() as cursor:
@@ -203,7 +215,7 @@ class ProjectExpense(Resource):
                 return {}, 400
             name = row[0]
             # insert new expense object
-            insert_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            insert_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             # insert_query = f"insert into expense (project_id, category_id, name, description, amount, created_at, created_by, updated_at, updated_by) select '{project_id}', '{api.payload['cid']}', '{api.payload['name']}', '{api.payload['desc']}', '{api.payload['amt']}', '{insert_datetime}', name, '{insert_datetime}', name from user where id = {api.payload['user_id']};"
             insert_query = f"insert into expense (project_id, category_id, name, description, amount, created_at, created_by, updated_at, updated_by) values (%s, %s, %s, %s, %s, %s, %s, %s, %s);"
             insert_data = (
