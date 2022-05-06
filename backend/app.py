@@ -63,9 +63,6 @@ expense_input_model = api.model(
         "name": fields.String(required=True, description="Expense name"),
         "desc": fields.String(required=True, description="Expense description"),
         "amt": fields.Integer(required=True, description="Expense amount"),
-        "user_id": fields.Integer(
-            required=True, description="User ID of user that created the expense"
-        ),
     },
 )
 
@@ -78,12 +75,11 @@ def check_for_token(func):
             return {}, 403
 
         token = auth.split(" ")[1]
-        print(token)
         try:
             data = jwt.decode(
                 token, flask_app.config["SECRET_KEY"], algorithms=["HS256"]
             )
-            print(data)
+            kwargs["user_id"] = data.get("user", None)
         except Exception as err:
             print(err)
             return {}, 403
@@ -121,7 +117,7 @@ def login():
         session["loggedin"] = True
         token = jwt.encode(
             {
-                "user": user["username"],
+                "user": user["id"],
                 "exp": datetime.utcnow() + timedelta(seconds=3600),
             },
             flask_app.config["SECRET_KEY"],
@@ -130,17 +126,22 @@ def login():
         return user
 
 
-@ns.route("/projects/<int:user_id>")
+@ns.route("/projects")
 class ProjectList(Resource):
     """Show list of projects under a user"""
 
     # @ns.marshal_list_with(project_model)
     @ns.doc("list_projects")
     @check_for_token
-    def get(self, user_id):
+    def get(self, **kwargs):
         """List all items"""
+        if kwargs["user_id"] is None:
+            return "Invalid token", 401
+
         proj_list = []
-        get_project_list_query = f"select * from project where user_id = {user_id};"
+        get_project_list_query = (
+            f"select * from project where user_id = '{kwargs['user_id']}';"
+        )
         with connection.cursor() as cursor:
             cursor.execute(get_project_list_query)
             for (pid, _, pname, pdesc, pbudget) in cursor:
@@ -164,8 +165,11 @@ class ProjectExpense(Resource):
     # @ns.marshal_with(expense_model)
     @ns.doc("get_expense")
     @check_for_token
-    def get(self, project_id):
+    def get(self, project_id, **kwargs):
         """Fetch a given project expense"""
+        if kwargs["user_id"] is None:
+            return "Invalid token", 401
+
         expenses = []
         get_expense_query = f"select * from expense where project_id = {project_id};"
         with connection.cursor() as cursor:
@@ -202,13 +206,14 @@ class ProjectExpense(Resource):
     @ns.doc("create_expense")
     @ns.expect(expense_input_model)
     @check_for_token
-    def post(self, project_id):
+    def post(self, project_id, **kwargs):
         """Create new project expense"""
+        if kwargs["user_id"] is None:
+            return "Invalid token", 401
+
         with connection.cursor() as cursor:
             # get user name
-            user_name_query = (
-                f"select name from user where id = {api.payload['user_id']};"
-            )
+            user_name_query = f"select name from user where id = {kwargs['user_id']};"
             cursor.execute(user_name_query)
             row = cursor.fetchone()
             if row is None:
