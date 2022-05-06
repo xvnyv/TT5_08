@@ -4,8 +4,10 @@ import MainContext from '../context/MainContext'
 
 function Project() {
     // const[viewProject,setviewProject,username] = useContext(MainContext);
-    const [isEdit, setIsEdit] = useState(false);
+    const username = "test-user"
 
+    const [isEdit, setIsEdit] = useState(false);
+    
     const viewProject = {
         "id": 1,
         "project_id": 2,
@@ -26,8 +28,10 @@ function Project() {
 
     const handleSubmit = async(e) => {
         e.preventDefault();
-
+        viewProject.updated_at = Date()
+        viewProject.updated_by = username ;
         console.dir(e)
+        console.log(viewProject)
         // TODO - submit to server
     }
 
@@ -66,7 +70,7 @@ function Project() {
                             </p>
                         </div>
                         <div className='text-center'>
-                            <button type='Submit'>Submit Changes</button>
+                            <button className="btn btn-dark" type='Submit'>Submit Changes</button>
                         </div>
                     </div >
                 </form>
@@ -74,11 +78,11 @@ function Project() {
                 :
                 (
                     < div >
-                        <div className='text-center'>
-                            <h1 >{name}</h1>
-                            <p>{description}</p>
+                        <div className='text-center bg-secondary rounded-pill py-3'>
+                            <h1 className=''>{name}</h1>
+                            <p className='text-faded'>{description}</p>
                         </div>
-                        <div className='mx-5'>
+                        <div className='mx-5 border border-5 rounded'>
                             <p>
                                 Budget: {amount}
                             </p>
@@ -97,7 +101,7 @@ function Project() {
                         </div>
                         <div className='text-center'>
                             <button className="btn btn-dark me-2" onClick={handleClickEdit}>Edit</button>
-                            <button className="btn btn-dark"onClick={handleDelete}>Delete Project</button>
+                            <button className="btn btn-dark" onClick={handleDelete}>Delete Project</button>
                         </div>
                     </div >
                 )}
