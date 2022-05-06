@@ -1,11 +1,13 @@
-import React, { useContext, useState } from 'react'
+import React, { useContext, useState,useRef } from 'react'
 import MainContext from '../context/MainContext'
 
 
 function Project(props) {
     // const[viewProject,setviewProject,username] = useContext(MainContext);
     const username = "test-user"
-
+    const budgetRef = useRef();
+    const nameRef = useRef();
+    const desRef = useRef();
     const [isEdit, setIsEdit] = useState(false);
 
     const viewProject = props.exp;
@@ -16,10 +18,13 @@ function Project(props) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        viewProject.updated_at = Date()
-        viewProject.updated_by = username;
-        console.dir(e)
-        console.log(viewProject)
+        const req = {
+            name : nameRef.current.value,
+            description : desRef.current.value,
+            amount: Number(budgetRef.current.value),
+
+        }
+        console.log(req)
         // TODO - submit to server
     }
 
@@ -36,14 +41,14 @@ function Project(props) {
                 <form onSubmit={handleSubmit}>
                     < div >
                         <div className='text-center bg-secondary rounded-pill py-3'>
-                            <h1 >{name}</h1>
-                            <p>{description}</p>
+                        <h1><input ref={nameRef} type="text" id="name" placeholder={name} /></h1>
+                            <p><textarea ref={desRef} cols="100" type="text" id="description" placeholder={description} /></p>
                         </div>
                         
                         <div className='py-3 px-1 my-2 mx-5 border border-dark border-5 rounded'>
                             <p>
-                                <label htmlFor="Budget">Budget: </label>
-                                <input type="text" id="Budget" placeholder={amount} />
+                                <label htmlFor="Budget">Expense amount: </label>
+                                <input ref={budgetRef} type="text" id="Budget" placeholder={amount} />
                             </p>
                             <p>
                                 Expense Created on: {created_at}
@@ -73,7 +78,7 @@ function Project(props) {
                         </div>
                         <div className='py-3 px-1 my-2 mx-5 border border-dark border-5 rounded'>
                             <p>
-                                Budget: {amount}
+                                Expense amount: {amount}
                             </p>
                             <p>
                                 Expense Created on: {created_at}
