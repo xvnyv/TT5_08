@@ -1,15 +1,15 @@
-import { useState, createContext } from 'react'
+import { useState, createContext } from "react";
 
-const MainContext = createContext()
+const MainContext = createContext();
 
 export const MainProvider = ({ children }) => {
-  const [username,setUser] = useState('');
-  const [userID,setUserID] = useState('');
-  const [appointment,setAppointment] = useState('');
-  const [isLogged,setIsLogged] = useState(false);
-  const [projects,setProjects] =useState([]);
-  const [viewProject,setViewProject]=useState([])
-  const [token,setToken]=useState('');
+  const [username, setUser] = useState("");
+  const [userID, setUserID] = useState("");
+  const [appointment, setAppointment] = useState("");
+  const [isLogged, setIsLogged] = useState(false);
+  const [projects, setProjects] = useState([]);
+  const [viewProject, setViewProject] = useState([]);
+  const [token, setToken] = useState("");
 
   return (
     <MainContext.Provider
@@ -27,13 +27,12 @@ export const MainProvider = ({ children }) => {
         viewProject,
         setViewProject,
         token,
-        setToken
-
+        setToken,
       }}
     >
       {children}
     </MainContext.Provider>
-  )
-}
+  );
+};
 
-export default MainContext
+export default MainContext;

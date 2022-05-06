@@ -96,7 +96,7 @@ def check_for_token(func):
         auth = request.headers.get("Authorization", None)
         if auth is None:
             return {}, 401
-
+        print(auth)
         token = auth.split(" ")[1]
         try:
             data = jwt.decode(
