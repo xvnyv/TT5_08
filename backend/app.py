@@ -11,10 +11,8 @@ api = Api(
 
 ns = api.namespace("ns1", description="NS1 description")
 
-flask_app.config['MYSQL_HOST'] = '13.58.31.172'
-flask_app.config['MYSQL_USER'] = 'root'
-flask_app.config['MYSQL_PASSWORD'] = ''
-flask_app.config['MYSQL_DB'] = 'project_expenses'
+connection = mysql.connector.connect(host='13.58.31.172',database='project_expenses',user='root',password='')
+
 
 test_model = api.model(
     "Model",
