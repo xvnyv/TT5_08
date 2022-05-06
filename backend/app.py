@@ -72,11 +72,9 @@ expense_update_model = api.model(
     },
 )
 expense_delete_model = api.model(
-    "Delete Expense",
-    {
-        "id": fields.Integer(required=True, description="ID of expense")
-    }
+    "Delete Expense", {"id": fields.Integer(required=True, description="ID of expense")}
 )
+
 
 @ns.route("/projects/<int:user_id>")
 class ProjectList(Resource):
@@ -192,9 +190,9 @@ class ProjectExpense(Resource):
             }
         return expense, 201
 
+    # @ns.marshal_with(expense_model, code=201)
     @ns.doc("update_expenses")
     @ns.expect(expense_update_model)
-    @ns.marshal_with(expense_model, code=201)
     def put(self, project_id):
         """Edit current project expense"""
         with connection.cursor() as cursor:
@@ -206,25 +204,27 @@ class ProjectExpense(Resource):
             row = cursor.fetchone()
             if row is None:
                 return {}, 400
-            else: 
+            else:
                 name = row[0]
+
             # updating new expense object
             update_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            update_query = f"update expense set name = %s, description = %s, amount = %s, updated_at = %s where id = %s and project_id = %s;"
+            update_query = f"update expense set name = %s, description = %s, amount = %s, updated_at = %s, updated_by = %s where id = %s and project_id = %s;"
             update_data = (
                 api.payload["name"],
                 api.payload["desc"],
                 api.payload["amt"],
                 update_datetime,
+                name,
                 api.payload["id"],
-                project_id
+                project_id,
             )
             cursor.execute(update_query, update_data)
             connection.commit()
 
             expense = {
-                "id": api.payload['id'],
-                "pid": api.payload['pid'],
+                "id": api.payload["id"],
+                "pid": api.payload["pid"],
                 "cid": api.payload["cid"],
                 "name": api.payload["name"],
                 "desc": api.payload["desc"],
@@ -235,24 +235,21 @@ class ProjectExpense(Resource):
                 "updated_by": name,
             }
         return expense, 201
-    
+
+    # @ns.marshal_with(expense_model, code=201)
     @ns.doc("delete_expenses")
     @ns.expect(expense_delete_model)
-    @ns.marshal_with(expense_model, code=201)
-    def put(self, project_id):
+    def delete(self, project_id):
         """Delete current project expense"""
         with connection.cursor() as cursor:
             delete_query = f"delete from expense where id = %s and project_id = %s;"
-            delete_data = (
-                api.payload["id"],
-                project_id
-            )
+            delete_data = (api.payload["id"], project_id)
             cursor.execute(delete_query, delete_data)
             connection.commit()
 
             expense = "successfully deleted"
-        return expense, 201
+        return expense
 
 
 if __name__ == "__main__":
-    flask_app.run()
+    flask_app.run(debug=True)
