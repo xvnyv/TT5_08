@@ -8,7 +8,7 @@ function Project() {
 
     const [isEdit, setIsEdit] = useState(false);
     
-    const viewProject = {
+    const viewProject = [{
         "id": 1,
         "project_id": 2,
         "category_id": 2,
@@ -19,7 +19,7 @@ function Project() {
         "created_by": "Jacky",
         "updated_at": "2021-11-06T16:00:00.000Z",
         "updated_by": "Jacky"
-    }
+    }]
 
 
     const { name, description, amount, created_at, created_by, updated_at, updated_by } = viewProject;
@@ -47,11 +47,13 @@ function Project() {
             {isEdit ? (
                 <form onSubmit={handleSubmit}>
                     < div >
-                        <div className='text-center'>
+                        <div className='text-center bg-secondary rounded-pill py-3'>
                             <h1 >{name}</h1>
                             <p>{description}</p>
                         </div>
-                        <div className='mx-5'>
+                        {viewProject.map((expense,key)=>()}
+                        
+                        <div className='py-3 px-1 my-2 mx-5 border border-dark border-5 rounded'>
                             <p>
                                 <label htmlFor="Budget">Budget: </label>
                                 <input type="text" id="Budget" placeholder={amount} />
@@ -82,7 +84,7 @@ function Project() {
                             <h1 className=''>{name}</h1>
                             <p className='text-faded'>{description}</p>
                         </div>
-                        <div className='mx-5 border border-5 rounded'>
+                        <div className='py-3 px-1 my-2 mx-5 border border-dark border-5 rounded'>
                             <p>
                                 Budget: {amount}
                             </p>
