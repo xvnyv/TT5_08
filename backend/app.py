@@ -229,8 +229,6 @@ class ProjectExpense(Resource):
                 "name": api.payload["name"],
                 "desc": api.payload["desc"],
                 "amt": api.payload["amt"],
-                "created_at": api.payload["created_at"],
-                "created_by": name,
                 "updated_at": update_datetime,
                 "updated_by": name,
             }
