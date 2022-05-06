@@ -1,3 +1,4 @@
+import datetime
 from flask import Flask
 from flask_restx import Api, Resource, fields
 import mysql.connector
@@ -15,14 +16,6 @@ connection = mysql.connector.connect(
     host="13.58.31.172", database="project_expenses", user="root", password=""
 )
 
-# test_model = api.model(
-#     "Model",
-#     {
-#         "int_field": fields.Integer(readonly=True, description="Integer Field 1"),
-#         "str_field": fields.String(required=True, description="String Field 1"),
-#     },
-# )
-
 project_model = api.model(
     "Project",
     {
@@ -33,21 +26,32 @@ project_model = api.model(
     },
 )
 
-# eid, pid, cid, name, desc, amt, created_date, created_user, updated_date, updated_user
-
 expense_model = api.model(
     "Expense",
     {
-        "eid": fields.Integer(),
-        "pid": fields.Integer(),
-        "cid": fields.Integer(),
-        "name": fields.String(),
-        "desc": fields.String(),
-        "amt": fields.Integer(),
-        "created_at": fields.String(),
-        "created_by": fields.String(),
-        "updated_at": fields.String(),
-        "updated_by": fields.String(),
+        "eid": fields.Integer(description="Expense ID"),
+        "pid": fields.Integer(description="Project ID"),
+        "cid": fields.Integer(required=True, description="Category ID"),
+        "name": fields.String(required=True, description="Expense name"),
+        "desc": fields.String(required=True, description="Expense description"),
+        "amt": fields.Integer(required=True, description="Expense amount"),
+        "created_at": fields.String(description="Date when expense was created"),
+        "created_by": fields.String(description="User that created expense"),
+        "updated_at": fields.String(description="Date when expense was last updated"),
+        "updated_by": fields.String(description="User that last updated expense"),
+    },
+)
+
+expense_input_model = api.model(
+    "New Expense",
+    {
+        "cid": fields.Integer(required=True, description="Category ID"),
+        "name": fields.String(required=True, description="Expense name"),
+        "desc": fields.String(required=True, description="Expense description"),
+        "amt": fields.Integer(required=True, description="Expense amount"),
+        "user_id": fields.Integer(
+            required=True, description="User ID of user that created the expense"
+        ),
     },
 )
 
@@ -116,37 +120,52 @@ class ProjectExpense(Resource):
                 return expense
         return {}, 404
 
+    @ns.doc("create_expense")
+    @ns.expect(expense_input_model)
+    @ns.marshal_with(expense_model, code=201)
+    def post(self, project_id):
+        """Create new project expense"""
+        with connection.cursor() as cursor:
+            # get user name
+            user_name_query = (
+                f"select name from user where id = {api.payload['user_id']};"
+            )
+            cursor.execute(user_name_query)
+            row = cursor.fetchone()
+            if row is None:
+                return {}, 400
+            name = row[0]
+            # insert new expense object
+            insert_query = f"insert into expense (project_id, category_id, name, description, amount, created_at, created_by, updated_at, updated_by) values (%s, %s, %s, %s, %s, %s, %s, %s, %s);"
+            insert_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            insert_data = (
+                project_id,
+                api.payload["cid"],
+                api.payload["name"],
+                api.payload["desc"],
+                api.payload["amt"],
+                insert_datetime,
+                name,
+                insert_datetime,
+                name,
+            )
+            cursor.execute(insert_query, insert_data)
+            eid = cursor.lastrowid
+            connection.commit()
 
-# @ns.doc("create_expense")
-# @ns.expect(test_model)
-# @ns.marshal_with(test_model, code=201)
-# def post(self):
-#     """Create new item"""
-#     items.append(api.payload)
-#     return items, 201
-
-# @ns.doc("delete_item")
-# @ns.response(204, "Item deleted")
-# def delete(self, int_field):
-#     """Delete a given item"""
-#     delete_item = None
-#     for item in items:
-#         if item["int_field"] == int_field:
-#             delete_item = item
-#     if delete_item is not None:
-#         items.remove(delete_item)
-#         return "", 204
-#     return "", 404
-
-# @ns.expect(test_model)
-# @ns.marshal_with(test_model)
-# def put(self, int_field):
-#     """Update a given item"""
-#     for item in items:
-#         if item["int_field"] == int_field:
-#             item.update(api.payload)
-#             return item
-#     return "", 404
+            expense = {
+                "eid": eid,
+                "pid": project_id,
+                "cid": api.payload["cid"],
+                "name": api.payload["name"],
+                "desc": api.payload["desc"],
+                "amt": api.payload["amt"],
+                "created_at": insert_datetime,
+                "created_by": name,
+                "updated_at": insert_datetime,
+                "updated_by": name,
+            }
+        return expense, 201
 
 
 if __name__ == "__main__":
