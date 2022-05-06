@@ -1,4 +1,4 @@
-import React,{useRef,useState,useContext} from 'react'
+import React, { useRef, useState, useContext } from 'react'
 import Project from './Project'
 import MainContext from '../context/MainContext'
 
@@ -30,15 +30,19 @@ function AllExpenses() {
             "updated_at": "2021-11-07T16:00:00.000Z",
             "updated_by": "Helen"
         }
-    
-        
+
+
     ]
 
-  return (
-    <div>
-        {viewProject.map((expense,key)=>(<Project key={key} exp={expense}/>))}
-    </div>
-  )
+    return (
+        <div>
+            {viewProject.map((expense, key) => (
+                <div className='my-3' key={key}>
+                    <Project  exp={expense} />
+                </div>
+            ))}
+        </div>
+    )
 }
 
 export default AllExpenses
