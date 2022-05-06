@@ -9,6 +9,7 @@ export const MainProvider = ({ children }) => {
   const [isLogged,setIsLogged] = useState(false);
   const [projects,setProjects] =useState([]);
   const [viewProject,setViewProject]=useState([])
+  const [token,setToken]=useState('');
 
   return (
     <MainContext.Provider
@@ -24,7 +25,9 @@ export const MainProvider = ({ children }) => {
         appointment,
         setAppointment,
         viewProject,
-        setViewProject
+        setViewProject,
+        token,
+        setToken
 
       }}
     >
