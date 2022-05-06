@@ -86,6 +86,7 @@ expense_delete_model = api.model(
     "Delete Expense", {"id": fields.Integer(required=True, description="ID of expense")}
 )
 
+
 def check_for_token(func):
     @wraps(func)
     def wrapped(*args, **kwargs):
@@ -275,13 +276,15 @@ class ProjectExpense(Resource):
     # @ns.marshal_with(expense_model, code=201)
     @ns.doc("update_expenses")
     @ns.expect(expense_update_model)
-    def put(self, project_id):
+    @check_for_token
+    def put(self, project_id, **kwargs):
         """Edit current project expense"""
+        if kwargs["user_id"] is None:
+            return "Invalid token", 401
+
         with connection.cursor() as cursor:
             # get user name
-            user_name_query = (
-                f"select name from user where id = {api.payload['user_id']};"
-            )
+            user_name_query = f"select name from user where id = {kwargs['user_id']};"
             cursor.execute(user_name_query)
             row = cursor.fetchone()
             if row is None:
@@ -290,7 +293,7 @@ class ProjectExpense(Resource):
                 name = row[0]
 
             # updating new expense object
-            update_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            update_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             update_query = f"update expense set name = %s, description = %s, amount = %s, updated_at = %s, updated_by = %s where id = %s and project_id = %s;"
             update_data = (
                 api.payload["name"],
@@ -319,8 +322,12 @@ class ProjectExpense(Resource):
     # @ns.marshal_with(expense_model, code=201)
     @ns.doc("delete_expenses")
     @ns.expect(expense_delete_model)
-    def delete(self, project_id):
+    @check_for_token
+    def delete(self, project_id, **kwargs):
         """Delete current project expense"""
+        if kwargs["user_id"] is None:
+            return "Invalid token", 401
+
         with connection.cursor() as cursor:
             delete_query = f"delete from expense where id = %s and project_id = %s;"
             delete_data = (api.payload["id"], project_id)
@@ -329,6 +336,7 @@ class ProjectExpense(Resource):
 
             expense = "successfully deleted"
         return expense
+
 
 if __name__ == "__main__":
     flask_app.run(debug=True)
