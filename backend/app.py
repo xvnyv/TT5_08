@@ -22,7 +22,7 @@ test_model = api.model(
     },
 )
 
-cnx = mysql.connector.connect(user="xinyi")
+cnx = mysql.connector.connect(user="root")
 
 items = [
     {"int_field": 1, "str_field": "str1"},
@@ -87,6 +87,39 @@ class Item(Resource):
                 return item
         return "", 404
 
+
+#update database record
+# @flask_app.route('/update',['PUT'])
+def update(self, params):
+    try:
+        mycursor = connection.cursor()
+        id = params.id
+        pid = params.project_id
+        cid = params.category_id
+        name = params.name
+        description = params.name
+        amount = params.amount
+        uexpense = "update expense set name = %s, description = %s, amount = %s, updated_at = now() where project_id = %s and category_id = %s;"
+        val = (name, description, amount, pid, cid)
+        mycursor.execute(uexpense, val)
+        connection.commit()
+        print("Update successful")
+    except:
+        print("failed to update")
+
+#delete database record
+# @flask_app.route('/update',['POST'])
+def update(self, params):
+    try:
+        mycursor = connection.cursor()
+        id = params.id
+        dexpense = "delete from expense where id = %s;"
+        val = (id)
+        mycursor.execute(dexpense, val)
+        connection.commit()
+        print("Update successful")
+    except:
+        print("failed to update")
 
 if __name__ == "__main__":
     flask_app.run()
