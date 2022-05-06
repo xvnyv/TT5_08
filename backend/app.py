@@ -1,7 +1,9 @@
 from flask import Flask, render_template, request
 from flask_restx import Api, Resource, fields
 import mysql.connector
-from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required
+import jwt
+from functools import wraps
+
 
 flask_app = Flask(__name__)
 api = Api(
@@ -23,6 +25,29 @@ test_model = api.model(
 )
 
 connection = mysql.connector.connect(host='13.58.31.172',database='project_expenses',user='root',password='')
+
+def token_required(f):
+   @wraps(f)
+   def decorator(*args, **kwargs):
+
+      token = None
+
+      if 'x-access-tokens' in request.headers:
+         token = request.headers['x-access-tokens']
+
+      if not token:
+         return jsonify({'message': 'a valid token is missing'})
+
+      try:
+         data = jwt.decode(token, app.config[SECRET_KEY])
+         current_user = Users.query.filter_by(public_id=data['public_id']).first()
+      except:
+         return jsonify({'message': 'token is invalid'})
+
+        return f(current_user, *args, **kwargs)
+   return decorator
+
+
 
 @flask_app.route('/login',methods =['GET','POST'])
 def login():
@@ -51,10 +76,14 @@ def login():
         else:
             return{'message': "wrong credentials"}    
         
-    return ('hello world')    
-        
+    return render_template('login.html')######  
+
+@jwt_required
 @flask_app.route('/logout',methods = ['GET','POST'])
-def logout();
+def logout():
+    
+
+          
 
 
 
