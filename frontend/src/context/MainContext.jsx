@@ -4,8 +4,11 @@ const MainContext = createContext()
 
 export const MainProvider = ({ children }) => {
   const [username,setUser] = useState('');
+  const [userID,setUserID] = useState('');
+  const [appointment,setAppointment] = useState('');
   const [isLogged,setIsLogged] = useState(false);
-  
+  const [projects,setProjects] =useState([]);
+  const [viewProject,setViewProject]=useState([])
 
   return (
     <MainContext.Provider
@@ -13,7 +16,16 @@ export const MainProvider = ({ children }) => {
         username,
         isLogged,
         setUser,
-        setIsLogged
+        setIsLogged,
+        projects,
+        setProjects,
+        userID,
+        setUserID,
+        appointment,
+        setAppointment,
+        viewProject,
+        setViewProject
+
       }}
     >
       {children}

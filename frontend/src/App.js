@@ -1,6 +1,7 @@
 
 import './App.css';
 import Login from './components/Login'
+import Project from './components/Project'
 import { MainProvider } from './context/MainContext';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
 
@@ -11,6 +12,9 @@ function App() {
         <Routes>
           <Route path='/' element={
             <Login />
+          } />
+          <Route path='/project/*' element={
+            <Project />
           } />
           
           

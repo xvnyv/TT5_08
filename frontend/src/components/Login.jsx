@@ -1,14 +1,23 @@
-import React,{useRef} from 'react'
+import React,{useRef, useContext} from 'react'
+import MainContext from '../context/MainContext';
 
 function Login() {
     const userRef = useRef();
     const passRef = useRef();
+    const {setUser, setProjects} = useContext(MainContext);
 
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        
+        // TODO send user and pass to server
+
+    }
     
 
   return (
     <div>
-        <form className="loginForm" method='POST'>
+        <form className="loginForm" onSubmit={handleSubmit} method='POST'>
             <div className='loginBox text-center mt-4'>
                 <div className='row justify-content-center'>
                     <div className='col-6'>
